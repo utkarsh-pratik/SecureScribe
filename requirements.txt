@@ -1,15 +1,23 @@
-streamlit>=1.15.0 
-openai
+# Core App Framework
+streamlit>=1.15.0
+
+# Environment & Security
 python-dotenv
-openai>=1.0.0
 cryptography
-transformers
-torch
-fpdf
-sentence-transformers
-faiss-cpu
-youtube-transcript-api
 bcrypt
 PyJWT
-python-dotenv
 
+# Database
+pymongo>=4.0.0
+
+# AI & Machine Learning
+transformers
+torch
+sentence-transformers
+faiss-cpu
+openai>=1.0.0
+
+# Utilities
+fpdf2
+youtube-transcript-api
+cloudinary
