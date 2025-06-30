@@ -2,7 +2,7 @@ from db_info import folders_col
 from bson import ObjectId
 import streamlit as st
 
-@st.cache_data
+@st.cache_data(ttl=600) # Cache for 10 minutes
 def load_folders(user_id):
     folders = folders_col.find({"user_id": ObjectId(user_id)})
     return [f["name"] for f in folders]
