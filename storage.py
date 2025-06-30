@@ -1,16 +1,16 @@
-from db_info import folders_col
+from db.mongo import get_folders_collection
 from bson import ObjectId
 import streamlit as st
 
 @st.cache_data(ttl=600) # Cache for 10 minutes
 def load_folders(user_id):
-    folders = folders_col.find({"user_id": ObjectId(user_id)})
+    folders = get_folders_collection.find({"user_id": ObjectId(user_id)})
     return [f["name"] for f in folders]
 
 def save_folders(user_id, folder_list):
-    folders_col.delete_many({"user_id": ObjectId(user_id)})
+    get_folders_collection.delete_many({"user_id": ObjectId(user_id)})
     for name in folder_list:
-        folders_col.insert_one({"user_id": ObjectId(user_id), "name": name})
+        get_folders_collection.insert_one({"user_id": ObjectId(user_id), "name": name})
 
 def rename_folder(user_id, old, new):
     folders = load_folders(user_id)
