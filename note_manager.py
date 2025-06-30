@@ -5,7 +5,7 @@ from bson import ObjectId
 from db_info import notes_col
 import streamlit as st
 
-@st.cache_data
+@st.cache_data(ttl=600) # Cache for 10 minutes
 def load_notes(user_id):
     notes = list(notes_col.find({"user_id": ObjectId(user_id)}))
     for note in notes:
