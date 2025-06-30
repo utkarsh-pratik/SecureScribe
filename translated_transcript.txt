@@ -1,0 +1,73 @@
+ In this video, you will see how and why the use of the npm install command is done, and I encourage you to react and comment below if you like this video. Here, I will create a new Vue tab, and I will run the simple Vue CLI command that I have mentioned here. I have also created an emd folder named "118" here, and this is what I will name it. In the comments and JavaScript, I will write vue-script to ensure that all packages are installed. Before I start my server, I want to show you that this is a big simple counter application. If you have worked with vites, you will know. If you are following the Signal course, you will know that we are doing this in every video. Here, I'm starting the server and running npm run dev and a big basic counter app comes to us. Let me explain what's happening here. I have created a component, and I have created a component inside Vuex. Here, I have created a folder named "component". I have named the component "newBar" correctly. The newBar is a vuex module. I have imported newBar in app.js and done what is needed here. Now, I will use newBar here, and I will simply say active value equals to user state from the newBar module. I will initialize the state for the user. Now, let me show you, I am setting the active value from the newBar module to the user state and initializing the value for the user. I hope you understand what I am doing here.
+
+ Initial value has been set and I am creating another function here which will change the active event, and this is a very basic function that will change the active event and return what return this function will return. The return value can be understood as the value that this function will return. This function that I am reusing will be correct.
+
+Now, I have a getActiveEvent function, which I use. I set its name to getActiveEvent. Using getActiveEvent, I set equal to y and then assign it to the getActiveEvent. Here, when I change the active event to equal to gateActiveEvent, what will I do? This is a new question arising.
+
+Now, I will create a console lock here and tell that render again. This is a simple, straightforward way I have added the console log. Now see how I render it again. I am rendering it twice here because I am in strict mode, and I can turn off strict mode if you want. If someone is causing a conflict, you can turn off strict mode just sending "off" here. This problem will not be created for you, though.
+
+Now, I will show you all the console here, which I have created earlier. It was refreshing again and again. Now I am doing something. Why can't I take it to the side and show it as well, and how can I do it? You can see what is happening here again. Now I am bringing it here again so that you can see this refresh properly.
+
+I can refresh it again here to show it to you more clearly. Now, if I count any number of times, I can see the refresh here because whenever the state changes, the component renders again. Now, whenever your props change, what can you do? You can import memo from React and use the memo function on it if you do it, then what happens is that it will re-render only when the props change.
+
+Now, I am removing this getActiveEvent function. I am removing the getActiveEvent function, correct? We are only passing the event here, but if I remove the memo function, will it re-render again and again? Because when the state changes, the component renders again. So, now I will re-render it a few times so that you can see it more clearly.
+
+I will refresh it again here for you to see clearly. Now, if I change the number of counts, I will refresh here so that you can see the refresh happening because when the state changes, the component renders again. So, now if you import memorize from React and use the memorize function on my function, what will happen is that the render will not happen every time, only when the value of count changes. The component will only re-render if the count changes.
+
+ Sure, I'll refresh it for you again if needed. If I make a count increment and that count is only decremented once per refresh, then everything is fine, right? Thanks to Memo Memo for doing this kind of work. When the props change, then render will only happen, otherwise it won't.
+
+Even if your app.js has something that causes a re-render, this data will remain the same as long as the props don't change because there's no need for a change. If the props don't change, then this component will re-render itself.
+
+Now, I've also added the getActiveObjective here and I'm asking you to use it here. I'll also ask you to create a button here and when you click on it, I'm calling the getActiveObjective function in a certain way. You can call the getActiveObjective function in a way I mentioned.
+
+Now, you can see that I'm refreshing it again. If I do that, then you can see that the render is happening repeatedly. You say the props don't change, but why is the render still happening? Brother, it's happening because this render is happening due to the following reason - whenever the entire component gets re-rendered, this function will also change.
+
+Now, since this function is changing, when you click on the button, it should change, right? But why is it not changing? It's because I've returned it indirectly. I haven't set the event handler directly to the button, it's in the data. I could set the event handler directly to the button, or I could simply return it indirectly, but there won't be any issue, right?
+
+Now, if I also set the event handler directly to the button, what would be the problem? The problem is that if I return it indirectly, then the state won't get updated properly, and the button won't change. This is because I've returned it indirectly, I haven't set the state directly in the button, it's in the data. If I set the state directly in the button, then there won't be any issue.
+
+Now, if I set the state directly in the button and click on it, it should change, but it's not. The reason is that I've returned it indirectly, and I haven't set the state directly in it. I could have set the state directly in it, but I haven't done that yet. I'm leaving it as it is to keep it simple.
+
+This is all about the cache. Brother, when the function doesn't change, then why is the render still happening repeatedly? This is happening due to the cache. Even if we click on the button, if I put some text inside it, it should change, but it's not. This is because I've returned it indirectly, and I haven't set the state directly in it. If I set the state directly in it, then the change should happen. But since I've returned it indirectly, and haven't set the state directly in it, that's why the change is not happening.
+
+If I set the state directly in it, then the change will happen, but I'm not doing that for now. I'm leaving it as it is to keep it simple. The cache works in a simple way, but it can sometimes lead to issues like this. So, I prefer to avoid using it unless necessary.
+
+ The conversation appears to be about a JavaScript issue related to a getActive function and a component re-rendering. Here's the translation of the Hindi/Hinglish conversation into English:
+
+Person: Is the function not working? Is the component broken? I'm telling you that something is happening here, something is happening here. When this specific function (getActive) gets active when the component re-renders, it changes itself. In JavaScript, if you've defined the function like this:
+
+```javascript
+getActive === function() {
+  // Some code here...
+}
+```
+
+Then yes, it's correct. You can see it here. I've mentioned that this function is getActive, and it's the same as this:
+
+```javascript
+getActive === function getActive() {
+  // Some code here...
+}
+```
+
+If it's correct, then if you say getActive === getActive===getActive, you might get an error like "getActive already declared". I've provided the getActive function. If you create it, it will return false. If you've also defined a semantic function, please don't do that. If our app.js is re-rendering, then this function will change. If you change the name, it will result in a prop change. How can I prevent this re-rendering? Can I do something about it?
+
+Regarding React, I'd like to mention that this is my getActive function, the semantic function is present on every re-render. Please don't change it, brother. But it doesn't work, it only works here. Your useCallBack is correct, React understands it. Here's what useCallBack means, if I use useCallBack, what will it do? Please cut this function and write the useCallBack snap here and what will you do with this to make it dependent?
+
+Please leave the dependencies array blank and write the function like this:
+
+```javascript
+useCallback(Function, [])
+```
+
+And if this is the function, what I've done inside useCallBack is to put the function there, and I've removed the dependencies array. If you look, when I refresh it, the renderer doesn't refresh. Why is it not refreshing? The reason it's not refreshing is that this function has become freezed (because it's inside a useCallBack). What does frozen mean? It means that when this app component is re-rendering, the function will not be created again, only if it's necessary for the component's re-render, it will be created again. If you don't use useCallBack, getActive will not remain frozen.
+
+ The given Hinglish text can be translated to English as follows:
+
+Brother, I will make another function because the entire component is re-rendering again. Everything will change initially, and it will appear again as if the getAdapterProp has changed, and here it means a new prop has arrived. If I render it correctly, it will end-render it, but what if it end-renders incorrectly? Here, the useState callback is returning, and if it does, it will unfreeze my function, but should we always freeze functions? If there are any constants, then we can freeze them, but assuming that I am returning an inner-plus-count here, if I return the inner-plus-count, then this function is changing, right? If the count is changing, then could you understand that if I do something here like unclick the onClick event and if I want to use this onClick event again, what kind of onClick event is it using? If it is returning the value, then I can change it in the same place where there is obsolete JavaScript, but if I write it like this, will it be the same as the first render before the onClick event was unclicked, or will it be the same after the first render, and then the second render but the third render won't be there because I have called the useCallback? First, I check what happens without useCallback, and I am commenting out and showing you what happens without useCallback, and I will write it up there so you can see what happens without useCallback. Without useCallback, what happens, and what would it be like without useCallback? This example will help you understand what useCallback is, and this example is where I am removing useCallback, and I am making a simple function here, where I am using the "for" keyword to document, so what will happen if I use this, and why is it happening because the function is changing again and again as it re-renders new, let me show you where it re-renders new every time. Check here where it re-renders new, and why is it re-rendering new because it is re-rendering, so it is also changing, right? Actually, the function is changing, which is why...
+
+ It seems there is a mix of Hindi and English in the text you provided. Here's the translated and corrected version:
+
+"If the function is changing on every re-render, this happens even after a useCallback hook returns, because I mentioned that when the count changes, a new getter active should be provided. If I don't use useCallback and a new function keeps appearing, this is because I have set a memo, the memo says: "Brother, if new props arrive, go to re-render, if the old props are there, stay put and don't make the re-render unnecessary. If the component is actually efficient, then it's fine, and if I don't use memo, whenever the component will re-render, it will continue to re-render. So, I hope you understood. The useCallback hook is not such a function that you can use it as an effect or use state, it's just for preventing unnecessary re-rendering. If you want to make your application very efficient and avoid excessive computer intensive work, you don't want your component to re-render unnecessarily. If your component is performance-sensitive and you use useCallback hooks, we use it to prevent unnecessary re-rendering, especially when your application becomes more computationally intensive to avoid excessive re-rendering. If you liked the video, I hope you'll give me a 5-star review and leave me a review for this video to know how it impacts you. I will be very happy if you share your feedback here. And if you haven't accessed the Sigma course (which I have linked), I encourage you to do so. And if you review me in the first video, give me 5 stars and leave a review, I would be very grateful. In this video, the Gais Tank You So Match For Viewing and Aa Iron Vil See You Next [Music] Time, i."
+
+To clarify, the intended meaning seems to be that using the useCallback hook helps to prevent unnecessary re-rendering of components, especially when the application becomes more computationally intensive. The speaker encourages viewers to watch the video and provides a link to the Sigma course. Additionally, they ask viewers to leave a review and give the video a 5-star rating.

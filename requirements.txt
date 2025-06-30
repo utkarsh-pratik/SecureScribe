@@ -1,0 +1,15 @@
+streamlit>=1.15.0 
+openai
+python-dotenv
+openai>=1.0.0
+cryptography
+transformers
+torch
+fpdf
+sentence-transformers
+faiss-cpu
+youtube-transcript-api
+bcrypt
+PyJWT
+python-dotenv
+
