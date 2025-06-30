@@ -3,6 +3,8 @@ import os
 from pymongo import MongoClient
 import streamlit as st
 from dotenv import load_dotenv
+from utils.secrets_manager import get_secret # Import the helper
+
 
 def get_mongo_client():
     """
@@ -10,7 +12,7 @@ def get_mongo_client():
     It correctly uses Streamlit secrets when deployed and falls back to a local
     .env file for local development.
     """
-    mongo_uri = None
+    mongo_uri = get_secret("MONGODB_URL")
 
     # This block runs when the app is deployed on Streamlit Community Cloud
     if hasattr(st, 'secrets'):
