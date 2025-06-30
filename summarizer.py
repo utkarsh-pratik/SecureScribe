@@ -1,6 +1,8 @@
 import os
 import requests
 from dotenv import load_dotenv
+from utils.secrets_manager import get_secret # Import the helper
+
 
 load_dotenv()
 API_KEY = os.getenv("OPENROUTER_API_KEY")
