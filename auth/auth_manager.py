@@ -5,8 +5,12 @@ import bcrypt
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from utils.secrets_manager import get_secret # Import the helper
+
 
 load_dotenv()
+
+SECRET_KEY = get_secret("SECRET_KEY")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "defaultsecret")
 JWT_EXPIRY_MINUTES = int(os.getenv("JWT_EXPIRY_MINUTES", "1440"))  # 1 day default
