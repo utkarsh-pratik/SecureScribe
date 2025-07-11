@@ -4,13 +4,13 @@ import streamlit as st
 
 @st.cache_data(ttl=600) # Cache for 10 minutes
 def load_folders(user_id):
-    folders = get_folders_collection.find({"user_id": ObjectId(user_id)})
+    folders = get_folders_collection().find({"user_id": ObjectId(user_id)})
     return [f["name"] for f in folders]
 
 def save_folders(user_id, folder_list):
-    get_folders_collection.delete_many({"user_id": ObjectId(user_id)})
+    get_folders_collection().delete_many({"user_id": ObjectId(user_id)})
     for name in folder_list:
-        get_folders_collection.insert_one({"user_id": ObjectId(user_id), "name": name})
+        get_folders_collection().insert_one({"user_id": ObjectId(user_id), "name": name})
 
 def rename_folder(user_id, old, new):
     folders = load_folders(user_id)
