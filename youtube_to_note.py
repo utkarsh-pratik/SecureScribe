@@ -1,14 +1,18 @@
-# youtube_to_note.py
-
-import streamlit as st
+import os
+import json
+import subprocess
+import tempfile
 from urllib.parse import urlparse, parse_qs
 from langdetect import detect
 from transformers import pipeline
-import googleapiclient.discovery
-import re
+import yt_dlp
 
-# --- Your existing models and functions (unchanged) ---
+
+
+# Load translation pipeline (many-to-English)
 translation_pipeline = pipeline("translation", model="Helsinki-NLP/opus-mt-mul-en")
+
+# Load summarization pipeline
 summarization_pipeline = pipeline("summarization", model="google/flan-t5-large")
 
 def extract_video_id(youtube_url):
@@ -23,77 +27,83 @@ def extract_video_id(youtube_url):
     return None
 
 def translate_to_english(text):
-    # ... (This function remains exactly the same)
     try:
         lang = detect(text)
         if lang == "en":
             return text, lang
-        translated = translation_pipeline(text[:4000])[0]["translation_text"]
+        translated = translation_pipeline(text[:4000])[0]["translation_text"]  # Truncate to avoid model limits
         return translated, lang
     except Exception as e:
         return text, "undetected"
 
 def summarize(text):
-    # ... (This function remains exactly the same)
-    return summarization_pipeline(text[:4000])[0]["summary_text"]
+    return summarization_pipeline(text[:4000])[0]["summary_text"]  # Truncate for long content
 
-# --- NEW: Function to parse SRT format from the API ---
-def parse_srt(srt_text: str) -> str:
-    """Parses an SRT formatted string and extracts only the text lines."""
-    lines = srt_text.splitlines()
-    text_lines = [line for line in lines if not line.isdigit() and '-->' not in line and line.strip() != '']
-    return " ".join(text_lines).strip()
-
-# --- REWRITTEN: get_transcript function using the official YouTube API ---
-def get_transcript(youtube_url: str) -> tuple[str | None, str | None]:
+def get_transcript(youtube_url):
     video_id = extract_video_id(youtube_url)
     if not video_id:
         return None, "⚠️ Invalid YouTube URL"
 
-    if "YOUTUBE_API_KEY" not in st.secrets:
-        return None, "⚠️ YOUTUBE_API_KEY not found in secrets."
+    if "YOUTUBE_COOKIES" not in st.secrets:
+        return None, "⚠️ YOUTUBE_COOKIES not found in secrets. This is required to bypass IP blocks."
 
+    cookie_filepath = None  # Initialize to ensure it exists for the finally block
     try:
-        youtube = googleapiclient.discovery.build(
-            "youtube", "v3", developerKey=st.secrets["YOUTUBE_API_KEY"]
-        )
+        # yt-dlp needs a file path for cookies. We create a temporary file from the secret.
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as cookie_file:
+            cookie_file.write(st.secrets["YOUTUBE_COOKIES"])
+            cookie_filepath = cookie_file.name
 
-        # 1. Get the list of available captions for the video
-        request = youtube.captions().list(part="snippet", videoId=video_id)
-        response = request.execute()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
+            
+            ydl_opts = {
+                'writeautomaticsub': True,
+                'subtitleslangs': langs,
+                'subtitlesformat': 'json3',
+                'skip_download': True,
+                'outtmpl': os.path.join(tmpdir, '%(id)s'),
+                'cookiefile': cookie_filepath, # Use the temporary cookie file
+            }
 
-        # 2. Find a caption track that matches your preferred languages
-        caption_id = None
-        preferred_langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
-        available_tracks = response.get("items", [])
-        
-        for lang in preferred_langs:
-            for track in available_tracks:
-                if track['snippet']['language'] == lang:
-                    caption_id = track['id']
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([youtube_url])
+
+            # This logic is preserved: it looks for the first available subtitle file.
+            subtitle_file = None
+            for lang in langs:
+                path = os.path.join(tmpdir, f"{video_id}.{lang}.json3")
+                if os.path.exists(path):
+                    subtitle_file = path
                     break
-            if caption_id:
-                break
+            
+            if not subtitle_file:
+                return None, "⚠️ No readable transcript found (captions disabled or unavailable)."
 
-        if not caption_id:
-            return None, "⚠️ No suitable transcript found for the preferred languages."
+            # This logic is preserved: it reads and parses the json3 file.
+            with open(subtitle_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        # 3. Download the caption track content
-        caption_request = youtube.captions().download(id=caption_id, tfmt="srt")
-        srt_transcript = caption_request.execute()
+            transcript = []
+            for event in data.get("events", []):
+                segs = event.get("segs")
+                if segs:
+                    text = "".join(seg["utf8"] for seg in segs).strip()
+                    transcript.append(text)
 
-        # 4. Parse the SRT content to get clean text
-        full_text = parse_srt(srt_transcript)
+            full_text = " ".join(transcript).strip()
+            if not full_text:
+                return None, "⚠️ Transcript was empty or unreadable."
 
-        if not full_text:
-            return None, "⚠️ Transcript was empty or unreadable."
-
-        return full_text, None
+            return full_text, None
 
     except Exception as e:
-        return None, f"⚠️ API Error: {str(e)}"
+        return None, f"⚠️ Transcript extraction failed: {str(e)}"
+    finally:
+        # Clean up the temporary cookie file
+        if cookie_filepath and os.path.exists(cookie_filepath):
+            os.remove(cookie_filepath)
 
-# --- Your existing main function (unchanged) ---
 def generate_notes_from_youtube(youtube_url):
     transcript, error = get_transcript(youtube_url)
     if error:
