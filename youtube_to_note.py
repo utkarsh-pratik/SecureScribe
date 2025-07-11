@@ -46,7 +46,7 @@ def get_transcript(youtube_url):
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            langs = ["hi", "en", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
+            langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
             cmd = [
                 yt_dlp_path,
                 "--write-auto-sub",
