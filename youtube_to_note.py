@@ -7,6 +7,7 @@ from langdetect import detect
 from transformers import pipeline
 import yt_dlp
 import streamlit as st
+import base64 
 
 
 # Load translation pipeline (many-to-English)
@@ -49,7 +50,7 @@ def get_transcript(youtube_url):
 
     cookie_filepath = None  # Initialize to ensure it exists for the finally block
     try:
-        # yt-dlp needs a file path for cookies. We create a temporary file from the secret.
+        decoded_cookies = base64.b64decode(st.secrets["YOUTUBE_COOKIES_BASE64"])
         with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as cookie_file:
             cookie_file.write(st.secrets["YOUTUBE_COOKIES"])
             cookie_filepath = cookie_file.name
