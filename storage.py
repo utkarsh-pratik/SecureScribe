@@ -11,6 +11,7 @@ def save_folders(user_id, folder_list):
     get_folders_collection().delete_many({"user_id": ObjectId(user_id)})
     for name in folder_list:
         get_folders_collection().insert_one({"user_id": ObjectId(user_id), "name": name})
+    st.cache_data.clear() # <-- ADD THIS
 
 def rename_folder(user_id, old, new):
     folders = load_folders(user_id)
@@ -24,4 +25,5 @@ def delete_folder(user_id, name):
     if name in folders:
         folders.remove(name)
         save_folders(user_id, folders)
+    st.cache_data.clear() # <-- ADD THIS
     return True
