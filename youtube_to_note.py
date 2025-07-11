@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 from langdetect import detect
 from transformers import pipeline
 import yt_dlp
-
+import streamlit as st
 
 
 # Load translation pipeline (many-to-English)
