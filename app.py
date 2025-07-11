@@ -45,6 +45,9 @@ if not st.session_state.token:
                 print("LOGIN ATTEMPT: Submitted login form.")
                 success, user_data = login_user(login_email, login_password)
                 if success:
+                    # Add this line to convert the _id to a string before using it.
+                    user_data["_id"] = str(user_data["_id"])
+                    # -----------------------------------------
                     print("LOGIN SUCCESS: Setting token and user.")
                     st.session_state.token = create_access_token(data={"sub": user_data["_id"]})
                     st.session_state.user = user_data
