@@ -5,8 +5,7 @@ import tempfile
 from urllib.parse import urlparse, parse_qs
 from langdetect import detect
 from transformers import pipeline
-from youtube_transcript_api import YouTubeTranscriptApi
-
+import yt_dlp
 
 # Load translation pipeline (many-to-English)
 translation_pipeline = pipeline("translation", model="Helsinki-NLP/opus-mt-mul-en")
@@ -39,33 +38,56 @@ def summarize(text):
     return summarization_pipeline(text[:4000])[0]["summary_text"]  # Truncate for long content
 
 def get_transcript(youtube_url):
-    # This logic is preserved
     video_id = extract_video_id(youtube_url)
     if not video_id:
         return None, "⚠️ Invalid YouTube URL"
 
     try:
-        # This logic is preserved: it will try to get the transcript in your
-        # preferred languages, in the order you specified.
-        langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
-        
-        # The library fetches the transcript data directly, replacing the subprocess call.
-        # The data structure is a list of text segments, just like your original code produced.
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=langs)
+        # This logic is preserved: it uses a temporary directory.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
+            
+            # Configure the yt-dlp library to download only the auto-subtitles.
+            ydl_opts = {
+                'writeautomaticsub': True,
+                'subtitleslangs': langs,
+                'subtitlesformat': 'json3',
+                'skip_download': True,
+                'outtmpl': os.path.join(tmpdir, '%(id)s'), # Set output template
+            }
 
-        # This logic is preserved: it joins the text segments into a single string.
-        # This creates the `full_text` variable exactly as your original code did.
-        full_text = " ".join([item['text'] for item in transcript_list]).strip()
+            # Use the yt-dlp library to download the subtitle file.
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([youtube_url])
 
-        # This logic is preserved
-        if not full_text:
-            return None, "⚠️ Transcript was empty or unreadable."
+            # Look for the first available subtitle file
+            subtitle_file = None
+            for lang in langs:
+                path = os.path.join(tmpdir, f"{video_id}.{lang}.json3")
+                if os.path.exists(path):
+                    subtitle_file = path
+                    break
 
-        # The final output is identical to your original function's output
-        return full_text, None
+            if not subtitle_file:
+                return None, "⚠️ No readable transcript found (captions disabled or unavailable)."
+
+            with open(subtitle_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            transcript = []
+            for event in data.get("events", []):
+                segs = event.get("segs")
+                if segs:
+                    text = "".join(seg["utf8"] for seg in segs).strip()
+                    transcript.append(text)
+
+            full_text = " ".join(transcript).strip()
+            if not full_text:
+                return None, "⚠️ Transcript was empty or unreadable."
+
+            return full_text, None
 
     except Exception as e:
-        # This logic is preserved: it gracefully handles errors.
         return None, f"⚠️ Transcript extraction failed: {str(e)}"
 
 def generate_notes_from_youtube(youtube_url):
