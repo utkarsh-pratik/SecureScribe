@@ -1,26 +1,41 @@
 from cryptography.fernet import Fernet
 import os
+import streamlit as st
 
 KEY_PATH = "data/secret.key"
 
 def load_key():
     """
-    Loads the key from KEY_PATH. If it doesn't exist, a new one is created.
+    Loads the encryption key.
+    Priority 1: From Streamlit secrets (for deployment).
+    Priority 2: From a local file (for local development).
     """
-    if not os.path.exists(KEY_PATH):
-        os.makedirs("data", exist_ok=True)
-        key = Fernet.generate_key()
-        with open(KEY_PATH, "wb") as key_file:
-            key_file.write(key)
+    # Check if the key is in Streamlit's secrets (for deployed app)
+    if "FERNET_KEY" in st.secrets:
+        print("Loading encryption key from Streamlit secrets.")
+        # Secrets are strings, but Fernet needs bytes.
+        return st.secrets["FERNET_KEY"].encode()
     
-    with open(KEY_PATH, "rb") as key_file:
-        return key_file.read()
+    # Fallback to local file method (for local development)
+    else:
+        print("Loading encryption key from local file.")
+        if not os.path.exists(KEY_PATH):
+            os.makedirs("data", exist_ok=True)
+            key = Fernet.generate_key()
+            with open(KEY_PATH, "wb") as key_file:
+                key_file.write(key)
+        
+        with open(KEY_PATH, "rb") as key_file:
+            return key_file.read()
 
-# Load the key once when the module is imported
+# --- Main initialization logic ---
 try:
+    # Use the new function to get the key
     key = load_key()
     fernet = Fernet(key)
 except Exception as e:
+    # Provide a more helpful error in the app itself
+    st.error("CRITICAL: Encryption key could not be loaded. Please ensure FERNET_KEY is set in Streamlit secrets.")
     print(f"CRITICAL: Could not load encryption key. {e}")
     fernet = None
 
