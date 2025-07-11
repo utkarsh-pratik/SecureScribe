@@ -85,3 +85,4 @@ urllib3==2.5.0
 watchdog==6.0.0
 youtube-transcript-api==1.1.0
 yt-dlp==2025.6.25
+google-api-python-client
