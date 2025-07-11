@@ -23,6 +23,7 @@ def save_notes(user_id, notes):
                 get_notes_collection().replace_one({"_id": note["_id"]}, note)
             else:
                 get_notes_collection().insert_one(note)
+        st.cache_data.clear() # <-- ADD THIS
         return True
     except Exception as e:
         print("Error saving notes:", e)
@@ -42,6 +43,7 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
     result = get_notes_collection().insert_one(note)
     note["id"] = str(result.inserted_id)
     note["content"] = content  # decrypted for in-app use
+    st.cache_data.clear() # <-- ADD THIS
     return note
 
 def update_notes_after_folder_rename(user_id, old, new):
