@@ -11,26 +11,33 @@ def generate_pdf(title: str, content: str):
     pdf = FPDF()
     pdf.add_page()
     
-    # Set font that supports a wider range of characters
-    pdf.set_font("Arial", size=12)
+    # IMPORTANT: Add a font that supports Unicode characters.
+    # This requires the 'DejaVuSans.ttf' file to be in your project's root directory.
+    try:
+        pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+        pdf.set_font('DejaVu', '', 12)
+    except RuntimeError:
+        # Fallback to Arial if DejaVu is not found, with a warning.
+        print("WARNING: DejaVuSans.ttf not found. Falling back to Arial. Special characters may not render correctly.")
+        pdf.set_font("Arial", size=12)
+
 
     # --- Title ---
     # Replace special characters in the title before adding it
-    safe_title = title.encode('latin-1', 'replace').decode('latin-1')
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, safe_title, 0, 1, 'C')
+    pdf.set_font(size=16, style='B')
+    pdf.multi_cell(0, 10, title, 0, 'C')
     pdf.ln(10)
+
 
     # --- Content ---
     # Replace special characters in the content before adding it
-    safe_content = content.encode('latin-1', 'replace').decode('latin-1')
-    pdf.set_font("Arial", '', 12)
-    pdf.multi_cell(0, 10, safe_content)
+    pdf.set_font(size=12)
+    pdf.multi_cell(0, 10, content)
 
     # --- Generate PDF in memory ---
     pdf_buffer = BytesIO()
     # The FPDF output must be encoded to latin-1 to be written to the buffer
-    pdf_buffer.write(pdf.output(dest='S').encode('latin-1'))
+    pdf_buffer.write(pdf.output(dest='S').encode('utf-8'))
     pdf_buffer.seek(0) # Rewind the buffer to the beginning
 
     # --- Create a filename ---
