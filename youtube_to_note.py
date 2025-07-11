@@ -45,14 +45,14 @@ def get_transcript(youtube_url):
     if not video_id:
         return None, "⚠️ Invalid YouTube URL"
 
-    if "YOUTUBE_COOKIES" not in st.secrets:
-        return None, "⚠️ YOUTUBE_COOKIES not found in secrets. This is required to bypass IP blocks."
+    if "YOUTUBE_COOKIES_BASE64" not in st.secrets:
+        return None, "⚠️ YOUTUBE_COOKIES_BASE64 not found in secrets. This is required to bypass IP blocks."
 
     cookie_filepath = None  # Initialize to ensure it exists for the finally block
     try:
         decoded_cookies = base64.b64decode(st.secrets["YOUTUBE_COOKIES_BASE64"])
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as cookie_file:
-            cookie_file.write(st.secrets["YOUTUBE_COOKIES"])
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as cookie_file:
+            cookie_file.write(decoded_cookies)
             cookie_filepath = cookie_file.name
 
         with tempfile.TemporaryDirectory() as tmpdir:
