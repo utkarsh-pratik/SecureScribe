@@ -38,7 +38,7 @@ def generate_pdf(title: str, content: str):
     # --- Generate PDF in memory ---
     pdf_buffer = BytesIO()
     # The FPDF output must be encoded to latin-1 to be written to the buffer
-    pdf_buffer.write(pdf.output(dest='S').encode('utf-8'))
+    pdf_buffer.write(pdf.output(dest='S'))
     pdf_buffer.seek(0) # Rewind the buffer to the beginning
 
     # --- Create a filename ---
