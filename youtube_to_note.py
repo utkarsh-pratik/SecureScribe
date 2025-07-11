@@ -5,8 +5,7 @@ import tempfile
 from urllib.parse import urlparse, parse_qs
 from langdetect import detect
 from transformers import pipeline
-
-yt_dlp_path = "C:/Program Files/Python310/Scripts/yt-dlp.exe"  # update path
+from youtube_transcript_api import YouTubeTranscriptApi
 
 
 # Load translation pipeline (many-to-English)
@@ -40,52 +39,33 @@ def summarize(text):
     return summarization_pipeline(text[:4000])[0]["summary_text"]  # Truncate for long content
 
 def get_transcript(youtube_url):
+    # This logic is preserved
     video_id = extract_video_id(youtube_url)
     if not video_id:
         return None, "⚠️ Invalid YouTube URL"
 
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
-            cmd = [
-                yt_dlp_path,
-                "--write-auto-sub",
-                "--sub-lang", ",".join(langs),
-                "--skip-download",
-                "--sub-format", "json3",
-                "-o", os.path.join(tmpdir, "%(id)s.%(ext)s"),
-                youtube_url
-            ]
-            subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # This logic is preserved: it will try to get the transcript in your
+        # preferred languages, in the order you specified.
+        langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
+        
+        # The library fetches the transcript data directly, replacing the subprocess call.
+        # The data structure is a list of text segments, just like your original code produced.
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=langs)
 
-            # Look for the first available subtitle file
-            subtitle_file = None
-            for lang in langs:
-                path = os.path.join(tmpdir, f"{video_id}.{lang}.json3")
-                if os.path.exists(path):
-                    subtitle_file = path
-                    break
+        # This logic is preserved: it joins the text segments into a single string.
+        # This creates the `full_text` variable exactly as your original code did.
+        full_text = " ".join([item['text'] for item in transcript_list]).strip()
 
-            if not subtitle_file:
-                return None, "⚠️ No readable transcript found (captions disabled or unavailable)."
+        # This logic is preserved
+        if not full_text:
+            return None, "⚠️ Transcript was empty or unreadable."
 
-            with open(subtitle_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            transcript = []
-            for event in data.get("events", []):
-                segs = event.get("segs")
-                if segs:
-                    text = "".join(seg["utf8"] for seg in segs).strip()
-                    transcript.append(text)
-
-            full_text = " ".join(transcript).strip()
-            if not full_text:
-                return None, "⚠️ Transcript was empty or unreadable."
-
-            return full_text, None
+        # The final output is identical to your original function's output
+        return full_text, None
 
     except Exception as e:
+        # This logic is preserved: it gracefully handles errors.
         return None, f"⚠️ Transcript extraction failed: {str(e)}"
 
 def generate_notes_from_youtube(youtube_url):
