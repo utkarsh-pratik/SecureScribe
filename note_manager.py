@@ -29,7 +29,7 @@ def save_notes(user_id, notes):
         print("Error saving notes:", e)
         return False
 
-def add_note(user_id, title, content, tags, subject, folder=None, favorite=False):
+def add_note(user_id, title, content, tags, subject, folder=None, favorite=False, attachment_url=None):
     note = {
         "user_id": ObjectId(user_id),
         "title": title,
@@ -37,9 +37,11 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
         "tags": [t.strip() for t in tags if t.strip()],
         "subject": subject,
         "folder": folder,
+        "attachment_url": attachment_url,
         "favorite": favorite,
         "created_at": datetime.now().isoformat()
     }
+    get_notes_collection().insert_one(note)
     result = get_notes_collection().insert_one(note)
     note["id"] = str(result.inserted_id)
     note["content"] = content  # decrypted for in-app use
