@@ -70,6 +70,7 @@ def get_transcript(youtube_url):
                 'skip_download': True,
                 'outtmpl': os.path.join(tmpdir, '%(id)s'),
                 'cookiefile': cookie_filepath, # Use the temporary cookie file
+                'noplaylist': True, # <-- ADD THIS LINE
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
