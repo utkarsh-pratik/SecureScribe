@@ -14,6 +14,8 @@ from auth.auth_manager import create_access_token # Make sure this is imported
 from routes.user_profile import user_profile_page
 import base64
 from utils.file_parser import parse_file
+import cloudinary
+import cloudinary.uploader
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -26,6 +28,8 @@ if "active_page" not in st.session_state:
     st.session_state.active_page = "View Notes"
 if "pre_filled_content" not in st.session_state:
     st.session_state.pre_filled_content = ""
+if "attachment_url" not in st.session_state:
+    st.session_state.attachment_url = None
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -168,21 +172,39 @@ if st.session_state.active_page == "Create Note":
 
     # --- NEW: File Uploader Feature ---
     st.markdown("---")
-    st.markdown("#### Or, upload a file to start:")
-    uploaded_file = st.file_uploader(
-        "Upload PDF/TXT to Pre-fill Content", 
+    st.markdown("#### Attach a file or extract its text:")
+    uploaded_file = st.file_uploader("Upload PDF/TXT to Pre-fill or Attach", 
         type=["pdf", "txt"],
-        help="The content of the uploaded file will be added to the note area below."
+        help="Use the buttons below to either extract the text or attach the file to the note."
     )
 
-    if uploaded_file is not None:
-        # When a new file is uploaded, parse it and update the session state
-        with st.spinner("Extracting content from file..."):
-            st.session_state.pre_filled_content = parse_file(uploaded_file)
-        # We set the uploaded_file to None in the session state to prevent
-        # re-processing on every rerun. This is a common Streamlit pattern.
-        st.session_state.uploaded_file = None 
-    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📄 Extract Text from File", disabled=(uploaded_file is None)):
+            with st.spinner("Extracting content from file..."):
+                st.session_state.pre_filled_content = parse_file(uploaded_file)
+            st.rerun()
+
+    with col2:
+        if st.button("📎 Attach File to Note", disabled=(uploaded_file is None)):
+            try:
+                with st.spinner("Uploading attachment..."):
+                    # Use "raw" for non-image files like PDFs to preserve them
+                    upload_result = cloudinary.uploader.upload(
+                        uploaded_file, 
+                        resource_type="raw", 
+                        folder="securescribe_attachments"
+                    )
+                st.session_state.attachment_url = upload_result.get("secure_url")
+                st.success(f"File '{uploaded_file.name}' attached successfully.")
+            except Exception as e:
+                st.error(f"File upload failed: {e}")
+                st.session_state.attachment_url = None # Clear on failure
+    
+    # Display a message if a file has been attached
+    if st.session_state.get("attachment_url"):
+        st.info(f"Attachment ready: {st.session_state.attachment_url}")
+        st.markdown("---")
     # ------------------------------------
 
     title = st.text_input("Title")
@@ -194,10 +216,20 @@ if st.session_state.active_page == "Create Note":
 
     if st.button("Save Note"):
         if title and content:
-            note = add_note(user["_id"], title, content, tags.split(","), subject, folder or None, favorite=is_fav)
+            note = add_note(
+                user["_id"], 
+                title, 
+                content, 
+                tags.split(","), 
+                subject, 
+                folder or None, 
+                favorite=is_fav,
+                attachment_url=st.session_state.get("attachment_url") # Pass the URL
+            )
             st.success(f"Note '{note['title']}' saved!")
             # --- NEW: Clear the pre-filled content after saving ---
             st.session_state.pre_filled_content = ""
+            st.session_state.attachment_url = None  # Clear the attachment URL after saving
         else:
             st.warning("⚠️ Title and content are required.")
 
