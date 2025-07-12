@@ -48,12 +48,17 @@ def get_transcript(youtube_url):
     if "YOUTUBE_COOKIES_BASE64" not in st.secrets:
         return None, "⚠️ YOUTUBE_COOKIES_BASE64 not found in secrets. This is required to bypass IP blocks."
 
-    cookie_filepath = None  # Initialize to ensure it exists for the finally block
+    # --- FIX: Create and handle the temporary file more robustly ---
+    # Create a temporary file path
+    fd, cookie_filepath = tempfile.mkstemp()
+
     try:
+        # Decode the secret and write it to the file in binary mode
         decoded_cookies = base64.b64decode(st.secrets["YOUTUBE_COOKIES_BASE64"])
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as cookie_file:
+        with os.fdopen(fd, 'wb') as cookie_file:
             cookie_file.write(decoded_cookies)
-            cookie_filepath = cookie_file.name
+        # The file is now closed and ready to be used by the external library.
+
 
         with tempfile.TemporaryDirectory() as tmpdir:
             langs = ["en", "hi", "mr", "bn", "ta", "te", "gu", "kn", "ml"]
