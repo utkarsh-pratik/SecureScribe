@@ -45,6 +45,9 @@ def get_transcript(youtube_url):
     if not video_id:
         return None, "⚠️ Invalid YouTube URL"
 
+    # --- FIX: Construct a clean URL to prevent playlist processing ---
+    clean_youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+
     if "YOUTUBE_COOKIES_BASE64" not in st.secrets:
         return None, "⚠️ YOUTUBE_COOKIES_BASE64 not found in secrets. This is required to bypass IP blocks."
 
@@ -74,7 +77,7 @@ def get_transcript(youtube_url):
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([youtube_url])
+                ydl.download([clean_youtube_url])
 
             # This logic is preserved: it looks for the first available subtitle file.
             subtitle_file = None
