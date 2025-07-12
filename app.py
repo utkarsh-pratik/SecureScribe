@@ -13,6 +13,7 @@ from auth.user_manager import signup_user, login_user
 from auth.auth_manager import create_access_token # Make sure this is imported
 from routes.user_profile import user_profile_page
 import base64
+from utils.file_parser import parse_file
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -23,6 +24,8 @@ if "user" not in st.session_state:
     st.session_state.user = None
 if "active_page" not in st.session_state:
     st.session_state.active_page = "View Notes"
+if "pre_filled_content" not in st.session_state:
+    st.session_state.pre_filled_content = ""
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -48,6 +51,7 @@ if not st.session_state.token:
                     # Add this line to convert the _id to a string before using it.
                     user_data["_id"] = str(user_data["_id"])
                     # -----------------------------------------
+
                     print("LOGIN SUCCESS: Setting token and user.")
                     st.session_state.token = create_access_token(data={"sub": user_data["_id"]})
                     st.session_state.user = user_data
@@ -161,8 +165,28 @@ user_email = st.session_state.get("user_email", "default@example.com")
 # ----------------------------- CREATE NOTE -----------------------------
 if st.session_state.active_page == "Create Note":
     st.subheader("✍️ Create a New Note")
+
+    # --- NEW: File Uploader Feature ---
+    st.markdown("---")
+    st.markdown("#### Or, upload a file to start:")
+    uploaded_file = st.file_uploader(
+        "Upload PDF/TXT to Pre-fill Content", 
+        type=["pdf", "txt"],
+        help="The content of the uploaded file will be added to the note area below."
+    )
+
+    if uploaded_file is not None:
+        # When a new file is uploaded, parse it and update the session state
+        with st.spinner("Extracting content from file..."):
+            st.session_state.pre_filled_content = parse_file(uploaded_file)
+        # We set the uploaded_file to None in the session state to prevent
+        # re-processing on every rerun. This is a common Streamlit pattern.
+        st.session_state.uploaded_file = None 
+    st.markdown("---")
+    # ------------------------------------
+
     title = st.text_input("Title")
-    content = st.text_area("Note Content", height=300)
+    content = st.text_area("Note Content", value=st.session_state.pre_filled_content, height=300)
     tags = st.text_input("Tags (comma-separated)")
     subject = st.text_input("Subject")
     folder = st.selectbox("Folder (optional)", [""] + load_folders(user["_id"]))
@@ -172,6 +196,8 @@ if st.session_state.active_page == "Create Note":
         if title and content:
             note = add_note(user["_id"], title, content, tags.split(","), subject, folder or None, favorite=is_fav)
             st.success(f"Note '{note['title']}' saved!")
+            # --- NEW: Clear the pre-filled content after saving ---
+            st.session_state.pre_filled_content = ""
         else:
             st.warning("⚠️ Title and content are required.")
 
