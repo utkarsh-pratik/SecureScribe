@@ -68,7 +68,7 @@ def get_transcript(youtube_url):
             
             ydl_opts = {
                 'writeautomaticsub': True,
-                'subtitleslangs': [','.join(langs)], 
+                'subtitleslangs': langs, 
                 'subtitlesformat': 'json3',
                 'skip_download': True,
                 'outtmpl': os.path.join(tmpdir, '%(id)s'),
