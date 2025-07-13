@@ -39,15 +39,21 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
         "folder": folder,
         "attachment_url": attachment_url,
         "favorite": favorite,
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
     }
     if content:
         note["content"] = encrypt(content)
-    get_notes_collection().insert_one(note)
+        
     result = get_notes_collection().insert_one(note)
     note["id"] = str(result.inserted_id)
-    note["content"] = content  # decrypted for in-app use
-    st.cache_data.clear() 
+    
+    if not content and attachment_url:
+        note["content"] = "" # Ensure content is a string
+    else:
+        note["content"] = decrypt(note["content"])
+
+    st.cache_data.clear() # Clear the cache after adding a note
     return note
 
 def update_notes_after_folder_rename(user_id, old, new):
