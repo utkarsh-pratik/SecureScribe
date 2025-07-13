@@ -42,16 +42,17 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    if content:
-        note["content"] = encrypt(content)
-        
-    result = get_notes_collection().insert_one(note)
-    note["id"] = str(result.inserted_id)
+    # Create a copy of the note for database insertion
+    db_note = note.copy()
     
-    if not content and attachment_url:
-        note["content"] = "" # Ensure content is a string
-    else:
-        note["content"] = decrypt(note["content"])
+    # Encrypt the content only for the database version
+    if content:
+        db_note["content"] = encrypt(content)
+    
+    # Insert the encrypted version into the database
+    result = get_notes_collection().insert_one(db_note)
+    
+    note["id"] = str(result.inserted_id)
 
     st.cache_data.clear() # Clear the cache after adding a note
     return note
