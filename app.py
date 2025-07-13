@@ -30,6 +30,8 @@ if "pre_filled_content" not in st.session_state:
     st.session_state.pre_filled_content = ""
 if "attachment_url" not in st.session_state:
     st.session_state.attachment_url = None
+if "note_creation_mode" not in st.session_state:
+    st.session_state.note_creation_mode = "text" # Default to 'text' mode
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -183,6 +185,8 @@ if st.session_state.active_page == "Create Note":
         if st.button("📄 Extract Text from File", disabled=(uploaded_file is None)):
             with st.spinner("Extracting content from file..."):
                 st.session_state.pre_filled_content = parse_file(uploaded_file)
+            st.session_state.note_creation_mode = "text" # Set mode to text
+            st.session_state.attachment_url = None # Clear any previous attachment
             st.rerun()
 
     with col2:
@@ -196,26 +200,40 @@ if st.session_state.active_page == "Create Note":
                         folder="securescribe_attachments"
                     )
                 st.session_state.attachment_url = upload_result.get("secure_url")
-                st.success(f"File '{uploaded_file.name}' attached successfully.")
+                st.session_state.note_creation_mode = "attachment" # Set mode to attachment
+                st.session_state.pre_filled_content = "" # Clear text content
+                st.success(f"File '{uploaded_file.name}' attached.")
             except Exception as e:
                 st.error(f"File upload failed: {e}")
-                st.session_state.attachment_url = None # Clear on failure
-    
-    # Display a message if a file has been attached
-    if st.session_state.get("attachment_url"):
-        st.info(f"Attachment ready: {st.session_state.attachment_url}")
-        st.markdown("---")
+
+    st.markdown("---")
     # ------------------------------------
 
+    is_attachment_mode = st.session_state.note_creation_mode == "attachment"
+
     title = st.text_input("Title")
-    content = st.text_area("Note Content", value=st.session_state.pre_filled_content, height=300)
+
+    # Conditionally disable the content area
+    content_placeholder = "Note content is taken from the attached file." if is_attachment_mode else ""
+    content = st.text_area(
+        "Note Content", 
+        value=st.session_state.pre_filled_content, 
+        height=300, 
+        disabled=is_attachment_mode,
+        placeholder=content_placeholder
+    )
+        
     tags = st.text_input("Tags (comma-separated)")
     subject = st.text_input("Subject")
     folder = st.selectbox("Folder (optional)", [""] + load_folders(user["_id"]))
     is_fav = st.checkbox("⭐ Mark as Favorite")
 
+    # Display info about the attachment if one is ready
+    if st.session_state.get("attachment_url"):
+        st.info(f"Attachment ready: {st.session_state.attachment_url}")
+
     if st.button("Save Note"):
-        if title and content:
+        if title and (content or st.session_state.get("attachment_url")):
             note = add_note(
                 user["_id"], 
                 title, 
@@ -230,9 +248,9 @@ if st.session_state.active_page == "Create Note":
             # --- NEW: Clear the pre-filled content after saving ---
             st.session_state.pre_filled_content = ""
             st.session_state.attachment_url = None  # Clear the attachment URL after saving
+            st.session_state.note_creation_mode = "text"
         else:
-            st.warning("⚠️ Title and content are required.")
-
+            st.warning("⚠️ A title and either content or an attachment is required.")
 # ----------------------------- VIEW NOTES (Corrected Version) -----------------------------
 elif st.session_state.active_page == "View Notes":
     st.subheader("📚 Your Notes")
@@ -396,6 +414,10 @@ elif st.session_state.active_page == "View Notes":
         st.markdown("## 📝 Notes")
         for note in notes_to_display:
             with st.expander(f"{note['title']}"):
+
+                if note.get("attachment_url"):
+                    st.markdown(f"**📎 Attachment:** [View Attached File]({note['attachment_url']})", unsafe_allow_html=True)
+                    st.markdown("---")
                 
                 # --- Action Buttons ---
                 col1, col2, col3, col4, col5 = st.columns(5)
