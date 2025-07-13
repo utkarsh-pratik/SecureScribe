@@ -414,10 +414,6 @@ elif st.session_state.active_page == "View Notes":
         st.markdown("## 📝 Notes")
         for note in notes_to_display:
             with st.expander(f"{note['title']}"):
-
-                ''' if note.get("attachment_url"):
-                    st.markdown(f"**📎 Attachment:** [View Attached File]({note['attachment_url']})", unsafe_allow_html=True)
-                    st.markdown("---") '''
                 
                 # --- Action Buttons ---
                 col1, col2, col3, col4, col5 = st.columns(5)
