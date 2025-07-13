@@ -47,6 +47,9 @@ def encrypt(message: str) -> str:
 
 def decrypt(encrypted_message: str) -> str:
     """Decrypts an encrypted string message."""
+    if not encrypted_message:
+        return ""
+        
     if fernet is None:
         raise Exception("Decryption service is not available.")
     
