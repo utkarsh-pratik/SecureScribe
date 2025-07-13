@@ -33,7 +33,7 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
     note = {
         "user_id": ObjectId(user_id),
         "title": title,
-        "content": encrypt(content),
+        "content": content,
         "tags": [t.strip() for t in tags if t.strip()],
         "subject": subject,
         "folder": folder,
@@ -41,11 +41,13 @@ def add_note(user_id, title, content, tags, subject, folder=None, favorite=False
         "favorite": favorite,
         "created_at": datetime.now().isoformat()
     }
+    if content:
+        note["content"] = encrypt(content)
     get_notes_collection().insert_one(note)
     result = get_notes_collection().insert_one(note)
     note["id"] = str(result.inserted_id)
     note["content"] = content  # decrypted for in-app use
-    st.cache_data.clear() # <-- ADD THIS
+    st.cache_data.clear() 
     return note
 
 def update_notes_after_folder_rename(user_id, old, new):
