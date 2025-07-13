@@ -415,9 +415,9 @@ elif st.session_state.active_page == "View Notes":
         for note in notes_to_display:
             with st.expander(f"{note['title']}"):
 
-                if note.get("attachment_url"):
+                ''' if note.get("attachment_url"):
                     st.markdown(f"**📎 Attachment:** [View Attached File]({note['attachment_url']})", unsafe_allow_html=True)
-                    st.markdown("---")
+                    st.markdown("---") '''
                 
                 # --- Action Buttons ---
                 col1, col2, col3, col4, col5 = st.columns(5)
@@ -468,10 +468,19 @@ elif st.session_state.active_page == "View Notes":
 
 
                 # --- Conditionally Display Content ---
-                if st.session_state[view_key]:
+                # --- Conditionally Display Content or Attachment Link ---
+                if st.session_state.get(f"view_note_{note['id']}", False):
                     st.markdown("---")
-                    st.markdown(f"**Content:**")
-                    st.write(note["content"])
+                    
+                    if note.get("content"):
+                        # If there is text content, display it
+                        st.markdown(f"**Content:**")
+                        st.write(note["content"])
+                    elif note.get("attachment_url"):
+                        # If there is no text content BUT there is an attachment, show the link
+                        st.markdown(f"**📎 Attachment:** [View Attached File]({note['attachment_url']})", unsafe_allow_html=True)
+                    # --------------------
+
                     st.markdown("---")
 
                 # --- Display Summary (if it exists) ---
