@@ -198,12 +198,24 @@ if st.session_state.active_page == "Create Note":
                         uploaded_file, 
                         resource_type="raw", 
                         folder="securescribe_attachments",
-                        access_mode="public" 
                     )
-                st.session_state.attachment_url = upload_result.get("secure_url")
-                st.session_state.note_creation_mode = "attachment" # Set mode to attachment
-                st.session_state.pre_filled_content = "" # Clear text content
-                st.success(f"File '{uploaded_file.name}' attached.")
+
+                # --- FIX: Manually construct the public URL ---
+                cloud_name = st.secrets["CLOUDINARY_CLOUD_NAME"]
+                public_id = upload_result.get("public_id")
+                file_format = upload_result.get("format")
+                
+                if public_id and file_format:
+                    # This is the standard URL structure for public Cloudinary assets
+                    public_url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.{file_format}"
+
+                    st.session_state.attachment_url = public_url
+                    st.session_state.note_creation_mode = "attachment" # Set mode to attachment
+                    st.session_state.pre_filled_content = "" # Clear text content
+                    st.success(f"File '{uploaded_file.name}' attached.")
+                else:
+                    st.error("File upload succeeded, but could not construct a public URL.")
+                # ---------------------------------------------
             except Exception as e:
                 st.error(f"File upload failed: {e}")
                 st.session_state.attachment_url = None
@@ -416,6 +428,10 @@ elif st.session_state.active_page == "View Notes":
         st.markdown("## 📝 Notes")
         for note in notes_to_display:
             with st.expander(f"{note['title']}"):
+
+                ''' if note.get("attachment_url"):
+                    st.markdown(f"**📎 Attachment:** [View Attached File]({note['attachment_url']})", unsafe_allow_html=True)
+                    st.markdown("---") '''
                 
                 # --- Action Buttons ---
                 col1, col2, col3, col4, col5 = st.columns(5)
@@ -465,7 +481,6 @@ elif st.session_state.active_page == "View Notes":
                             st.markdown(link, unsafe_allow_html=True)
 
 
-                # --- Conditionally Display Content ---
                 # --- Conditionally Display Content or Attachment Link ---
                 if st.session_state.get(f"view_note_{note['id']}", False):
                     st.markdown("---")
