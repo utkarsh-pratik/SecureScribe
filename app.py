@@ -198,17 +198,13 @@ if st.session_state.active_page == "Create Note":
                         uploaded_file, 
                         resource_type="raw", 
                         folder="securescribe_attachments",
+                        public_id=uploaded_file.name,
+                        overwrite=True # Allow overwriting if a file with the same name exists
                     )
 
-                # --- FIX: Manually construct the public URL ---
-                cloud_name = st.secrets["CLOUDINARY_CLOUD_NAME"]
-                public_id = upload_result.get("public_id")
-                file_format = upload_result.get("format")
+                public_url = upload_result.get("secure_url")
                 
-                if public_id and file_format:
-                    # This is the standard URL structure for public Cloudinary assets
-                    public_url = f"https://res.cloudinary.com/{cloud_name}/raw/upload/{public_id}.{file_format}"
-
+                if public_url:
                     st.session_state.attachment_url = public_url
                     st.session_state.note_creation_mode = "attachment" # Set mode to attachment
                     st.session_state.pre_filled_content = "" # Clear text content
