@@ -206,6 +206,7 @@ if st.session_state.active_page == "Create Note":
                 st.success(f"File '{uploaded_file.name}' attached.")
             except Exception as e:
                 st.error(f"File upload failed: {e}")
+                st.session_state.attachment_url = None
 
     st.markdown("---")
     # ------------------------------------
