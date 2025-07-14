@@ -196,8 +196,9 @@ if st.session_state.active_page == "Create Note":
                     # Use "raw" for non-image files like PDFs to preserve them
                     upload_result = cloudinary.uploader.upload(
                         uploaded_file, 
-                        resource_type="image", 
-                        folder="securescribe_attachments"
+                        resource_type="raw", 
+                        folder="securescribe_attachments",
+                        access_mode="public" 
                     )
                 st.session_state.attachment_url = upload_result.get("secure_url")
                 st.session_state.note_creation_mode = "attachment" # Set mode to attachment
