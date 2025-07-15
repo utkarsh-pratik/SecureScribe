@@ -88,3 +88,4 @@ yt-dlp==2025.6.25
 google-api-python-client
 PyPDF2
 PyMuPDF
+beautifulsoup4
