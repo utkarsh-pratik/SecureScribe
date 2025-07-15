@@ -1,6 +1,6 @@
 import streamlit as st
 from datetime import datetime
-from note_manager import load_notes, add_note, save_notes, update_notes_after_folder_rename, update_notes_after_folder_delete
+from note_manager import load_notes, add_note, save_notes, update_notes_after_folder_rename, update_notes_after_folder_delete, generate_summary_for_note
 from summarizer import summarize_note
 from pdf_exporter import generate_pdf
 from semantic_search import build_index, semantic_search
@@ -442,10 +442,17 @@ elif st.session_state.active_page == "View Notes":
                 with col4:
                     if st.button("Summarize", key=f"summarize_{note['id']}"):
                         with st.spinner("Generating summary..."):
-                            summary = summarize_note(note["content"])
-                            note["summary"] = summary
-                            save_notes(user_id, all_notes)
-                            st.rerun()
+                            # --- FIX: Call the correct function ---
+                            summary = generate_summary_for_note(note)
+                            
+                            # Check if the function returned an error
+                            if summary.startswith("Error:"):
+                                st.error(summary)
+                            else:
+                                # If successful, save the summary
+                                note["summary"] = summary
+                                save_notes(user_id, all_notes)
+                                st.rerun()
 
                  # 1. Favorite Button
                 with col1:
