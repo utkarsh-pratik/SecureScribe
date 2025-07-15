@@ -17,6 +17,7 @@ from utils.file_parser import parse_file
 import cloudinary
 import cloudinary.uploader
 from utils.web_scraper import scrape_website_text
+from utils.transcriber import transcribe_from_file, transcribe_from_url
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -139,6 +140,10 @@ if st.sidebar.button("📚 View Notes"):
 
 if st.sidebar.button("📥 Import from Web"):
     st.session_state.active_page = "Import from Web"
+    st.rerun()
+
+if st.sidebar.button("🎙️ Transcribe Media"):
+    st.session_state.active_page = "Transcribe Media"
     st.rerun()
 
 if st.sidebar.button("👤 Profile"):
@@ -598,6 +603,118 @@ elif st.session_state.active_page == "Import from Web": # <-- RENAMED
                     st.success("✅ Note saved successfully!")
                     
                     # Clean up session state and exit save mode
+                    st.session_state.generated_note_content = None
+                    st.session_state.generated_note_save_mode = False
+                    st.rerun()
+
+
+# ----------------------------- TRANSCRIBE MEDIA (with Auto-Detect) -----------------------------
+elif st.session_state.active_page == "Transcribe Media":
+    st.subheader("🎙️ Transcribe Media to Notes")
+
+    # --- Generic Session State Initialization ---
+    if "generated_note_content" not in st.session_state:
+        st.session_state.generated_note_content = None
+    if "generated_note_title" not in st.session_state:
+        st.session_state.generated_note_title = "Generated Note"
+    if "generated_note_save_mode" not in st.session_state:
+        st.session_state.generated_note_save_mode = False
+
+    # --- UPDATED: Language Selection with Auto-Detect ---
+    SUPPORTED_LANGUAGES = {
+        "Auto-Detect": "auto", # Add the auto-detect option
+        "English": "en",
+        "Hindi": "hi",
+        "Spanish": "es",
+        "French": "fr",
+        "German": "de",
+        "Italian": "it",
+        "Portuguese": "pt",
+        "Russian": "ru",
+        "Japanese": "ja",
+        "Korean": "ko",
+        "Chinese": "zh"
+    }
+    selected_language_name = st.selectbox(
+        "Select the language of the audio/video (or let us detect it):",
+        options=list(SUPPORTED_LANGUAGES.keys()) # The list of user-friendly names
+    )
+    language_code = SUPPORTED_LANGUAGES[selected_language_name] # Get the corresponding code ('auto', 'en', etc.)
+    st.markdown("---")
+    # ----------------------------------------------------
+
+    # --- Tabbed Interface for Upload and URL (no changes needed here) ---
+    upload_tab, url_tab = st.tabs(["Upload File", "From URL"])
+
+    with upload_tab:
+        st.markdown("#### Generate Notes from an Audio or Video File")
+        media_file = st.file_uploader(
+            "Upload an audio or video file",
+            type=["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"]
+        )
+        if st.button("Generate from Uploaded File", disabled=(media_file is None)):
+            st.session_state.generated_note_save_mode = False
+            spinner_text = "Transcribing file (auto-detecting language)..." if language_code == "auto" else f"Transcribing {selected_language_name} file..."
+            with st.spinner(spinner_text):
+                # Pass the selected language code to the function
+                transcript, error = transcribe_from_file(media_file, language=language_code)
+            
+            if error:
+                st.error(error)
+            else:
+                st.success("File transcribed successfully.")
+                with st.spinner("Generating notes from transcript..."):
+                    st.session_state.generated_note_title = f"Notes from {media_file.name}"
+                    st.session_state.generated_note_content = convert_to_notes(transcript)
+    
+    with url_tab:
+        st.markdown("#### Generate Notes from a Public URL")
+        media_url = st.text_input("Public URL to an audio or video file", key="media_url_input")
+        if st.button("Generate from URL", disabled=(not media_url)):
+            st.session_state.generated_note_save_mode = False
+            spinner_text = "Transcribing from URL (auto-detecting language)..." if language_code == "auto" else f"Transcribing {selected_language_name} from URL..."
+            with st.spinner(spinner_text):
+                # Pass the selected language code to the function
+                transcript, error = transcribe_from_url(media_url, language=language_code)
+
+            if error:
+                st.error(error)
+            else:
+                st.success("URL transcribed successfully.")
+                with st.spinner("Generating notes from transcript..."):
+                    st.session_state.generated_note_title = "Notes from URL"
+                    st.session_state.generated_note_content = convert_to_notes(transcript)
+
+
+    # --- The generic preview and save form  ---
+    if st.session_state.generated_note_content:
+        st.markdown("---")
+        st.markdown("### 📝 Generated Notes Preview")
+        st.write(st.session_state.generated_note_content)
+        
+        if not st.session_state.generated_note_save_mode:
+            if st.button("Edit and Save Note"):
+                st.session_state.generated_note_save_mode = True
+                st.rerun()
+
+    if st.session_state.generated_note_save_mode:
+        st.markdown("---")
+        st.markdown("### 💾 Save Your New Note")
+        with st.form("generated_note_save_form"):
+            note_title = st.text_input("Title", value=st.session_state.generated_note_title)
+            note_content = st.text_area("Content", value=st.session_state.generated_note_content, height=300)
+            note_tags = st.text_input("Tags (comma-separated)", value="generated, import, transcription")
+            note_subject = st.text_input("Subject")
+            all_folders = load_folders(user_id)
+            note_folder = st.selectbox("Folder (optional)", [""] + all_folders)
+            note_favorite = st.checkbox("⭐ Mark as Favorite")
+            submitted = st.form_submit_button("Save Note to Vault")
+            if submitted:
+                if not note_title or not note_content:
+                    st.error("Title and Content cannot be empty.")
+                else:
+                    add_note(user_id=user_id, title=note_title, content=note_content, tags=note_tags.split(","), subject=note_subject, folder=note_folder or None, favorite=note_favorite)
+                    st.success("✅ Note saved successfully!")
                     st.session_state.generated_note_content = None
                     st.session_state.generated_note_save_mode = False
                     st.rerun()
