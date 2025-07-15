@@ -102,6 +102,16 @@ def convert_to_notes(transcript_text):
         if notes.startswith("⚠️"):
             print(f"⚠️ Skipped chunk {i+1} due to error: {notes}")
             continue
-        all_notes.append(f"### Notes from Part {i+1}:\n\n{notes}")
 
+        all_notes.append(notes)
+        # --------------------
+
+    # --- NEW LOGIC: Add headers only if there's more than one part ---
+    if len(all_notes) > 1:
+        # If there are multiple parts, add the headers for clarity
+        for i in range(len(all_notes)):
+            all_notes[i] = f"### Notes from Part {i+1}:\n\n{all_notes[i]}"
+    # -----------------------------------------------------------------
+            
+    # Join all the parts into a single string for the final output
     return "\n\n".join(all_notes)
