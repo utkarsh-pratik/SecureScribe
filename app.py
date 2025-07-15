@@ -16,6 +16,7 @@ import base64
 from utils.file_parser import parse_file
 import cloudinary
 import cloudinary.uploader
+from utils.web_scraper import scrape_website_text
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -136,8 +137,8 @@ if st.sidebar.button("📚 View Notes"):
     st.session_state.active_page = "View Notes"
     st.rerun()
 
-if st.sidebar.button("📥 YouTube to Note"):
-    st.session_state.active_page = "YouTube to Note"
+if st.sidebar.button("📥 Import from Web"):
+    st.session_state.active_page = "Import from Web"
     st.rerun()
 
 if st.sidebar.button("👤 Profile"):
@@ -261,6 +262,7 @@ if st.session_state.active_page == "Create Note":
             st.session_state.note_creation_mode = "text"
         else:
             st.warning("⚠️ A title and either content or an attachment is required.")
+            
 # ----------------------------- VIEW NOTES (Corrected Version) -----------------------------
 elif st.session_state.active_page == "View Notes":
     st.subheader("📚 Your Notes")
@@ -444,7 +446,7 @@ elif st.session_state.active_page == "View Notes":
                         with st.spinner("Generating summary..."):
                             # --- FIX: Call the correct function ---
                             summary = generate_summary_for_note(note)
-                            
+
                             # Check if the function returned an error
                             if summary.startswith("Error:"):
                                 st.error(summary)
@@ -501,91 +503,85 @@ elif st.session_state.active_page == "View Notes":
                     st.info(note["summary"])
 
 
-# ----------------------------- YOUTUBE -----------------------------
+# ----------------------------- IMPORT FROM WEB -----------------------------
+elif st.session_state.active_page == "Import from Web": # <-- RENAMED
+    st.subheader("📥 Import from Web")
 
-elif st.session_state.active_page == "YouTube to Note":
-    st.subheader("📥 Import from YouTube")
+    # --- Refactored Session State Initialization ---
+    if "generated_note_content" not in st.session_state:
+        st.session_state.generated_note_content = None
+    if "generated_note_title" not in st.session_state:
+        st.session_state.generated_note_title = "Generated Note"
+    if "generated_note_save_mode" not in st.session_state:
+        st.session_state.generated_note_save_mode = False
+    # ---------------------------------------------
 
-    # This helper function creates the link to view a PDF in a new tab
-    def get_pdf_display_link(pdf_buffer, link_text="View PDF in New Tab"):
-        """Generates an HTML link to display a PDF in a new tab."""
-        pdf_bytes = pdf_buffer.getvalue()
-        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-        return f'<a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="text-decoration: none; color: #007BFF; font-weight: bold;">{link_text}</a>'
+    # --- Tabbed Interface for YouTube and Website ---
+    tab1, tab2 = st.tabs(["From YouTube", "From Website URL"])
 
-    # Initialize session state variables to manage the workflow
-    if "youtube_note_content" not in st.session_state:
-        st.session_state.youtube_note_content = None
-    if "youtube_note_title" not in st.session_state:
-        st.session_state.youtube_note_title = "YouTube Note" # Default title
-    if "youtube_save_mode" not in st.session_state:
-        st.session_state.youtube_save_mode = False
+    with tab1:
+        st.markdown("#### Generate Notes from a YouTube Video")
+        yt_link = st.text_input("YouTube URL", key="youtube_url_input")
+        if st.button("Generate from YouTube"):
+            st.session_state.generated_note_save_mode = False # Reset save mode
+            with st.spinner("Fetching transcript..."):
+                transcript, error = get_transcript(yt_link)
+            
+            if error:
+                st.error(error)
+                st.session_state.generated_note_content = None
+            else:
+                st.success("Transcript extracted successfully.")
+                with st.spinner("Generating notes from transcript..."):
+                    st.session_state.generated_note_title = "YouTube Note"
+                    st.session_state.generated_note_content = convert_to_notes(transcript)
 
-    yt_link = st.text_input("YouTube URL")
+    with tab2:
+        st.markdown("#### Generate Notes from a Website")
+        web_url = st.text_input("Website URL", key="website_url_input")
+        if st.button("Generate from Website"):
+            st.session_state.generated_note_save_mode = False # Reset save mode
+            with st.spinner("Scraping website content..."):
+                scraped_text, page_title = scrape_website_text(web_url)
+            
+            if not scraped_text:
+                st.error(page_title) # page_title will contain the error message
+                st.session_state.generated_note_content = None
+            else:
+                st.success("Website content scraped successfully.")
+                with st.spinner("Generating notes from content..."):
+                    st.session_state.generated_note_title = page_title
+                    st.session_state.generated_note_content = convert_to_notes(scraped_text)
 
-    if st.button("Generate Notes"):
-        # When generating new notes, always exit the "save mode"
-        st.session_state.youtube_save_mode = False
-        with st.spinner("Fetching transcript..."):
-            # Assuming get_transcript can be modified to return the video title
-            transcript, error = get_transcript(yt_link) 
-        
-        if error:
-            st.error(error)
-            st.session_state.youtube_note_content = None
-        else:
-            st.success("Transcript extracted successfully.")
-            with st.spinner("Generating notes from transcript..."):
-                generated_notes = convert_to_notes(transcript)
-                
-                # Store results in session state
-                # For a better experience, you could modify get_transcript to return the video's actual title
-                st.session_state.youtube_note_title = "YouTube Note" 
-                st.session_state.youtube_note_content = generated_notes
-
-    # --- Display the generated notes preview and initial actions ---
-    if st.session_state.youtube_note_content and not st.session_state.youtube_save_mode:
+    # --- Display the generated notes preview and save form (this part is now generic) ---
+    if st.session_state.generated_note_content:
         st.markdown("---")
         st.markdown("### 📝 Generated Notes Preview")
-        st.write(st.session_state.youtube_note_content)
+        st.write(st.session_state.generated_note_content)
         
-        col1, col2 = st.columns(2)
-        with col1:
-            # This button will activate the save form
+        # Activate the save form if not already active
+        if not st.session_state.generated_note_save_mode:
             if st.button("Edit and Save Note"):
-                st.session_state.youtube_save_mode = True
+                st.session_state.generated_note_save_mode = True
                 st.rerun()
-        with col2:
-            if st.button("View Preview as PDF"):
-                pdf_buffer, _ = generate_pdf(
-                    st.session_state.youtube_note_title,
-                    st.session_state.youtube_note_content
-                )
-                link = get_pdf_display_link(pdf_buffer, "Click here to view PDF")
-                st.markdown(link, unsafe_allow_html=True)
 
-    # --- Display the full save form if in "save mode" ---
-    if st.session_state.get("youtube_save_mode", False):
+    # Display the full save form if in "save mode"
+    if st.session_state.generated_note_save_mode:
         st.markdown("---")
         st.markdown("### 💾 Save Your New Note")
         
-        with st.form("youtube_save_form"):
-            # Pre-fill the form with the generated content, but allow edits
-            note_title = st.text_input("Title", value=st.session_state.youtube_note_title)
-            note_content = st.text_area("Content", value=st.session_state.youtube_note_content, height=300)
+        with st.form("generated_note_save_form"):
+            note_title = st.text_input("Title", value=st.session_state.generated_note_title)
+            note_content = st.text_area("Content", value=st.session_state.generated_note_content, height=300)
             
-            # Add the other metadata fields, just like in "Create Note"
-            note_tags = st.text_input("Tags (comma-separated)", value="youtube")
-            note_subject = st.text_input("Subject", value="YouTube Import")
+            note_tags = st.text_input("Tags (comma-separated)", value="generated, import")
+            note_subject = st.text_input("Subject")
             
             all_folders = load_folders(user_id)
             note_folder = st.selectbox("Folder (optional)", [""] + all_folders)
-            
             note_favorite = st.checkbox("⭐ Mark as Favorite")
 
-            # The final save button inside the form
             submitted = st.form_submit_button("Save Note to Vault")
-
             if submitted:
                 if not note_title or not note_content:
                     st.error("Title and Content cannot be empty.")
@@ -602,9 +598,8 @@ elif st.session_state.active_page == "YouTube to Note":
                     st.success("✅ Note saved successfully!")
                     
                     # Clean up session state and exit save mode
-                    st.session_state.youtube_note_content = None
-                    st.session_state.youtube_note_title = "YouTube Note"
-                    st.session_state.youtube_save_mode = False
+                    st.session_state.generated_note_content = None
+                    st.session_state.generated_note_save_mode = False
                     st.rerun()
 
 # ----------------------------- USER PROFILE -----------------------------
