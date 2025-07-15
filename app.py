@@ -150,7 +150,7 @@ if st.sidebar.button("👤 Profile"):
     st.session_state.active_page = "Profile"
     st.rerun()
 
-st.sidebar.markdown("---")
+#st.sidebar.markdown("---")
 
 # Add logout button in sidebar
 if st.sidebar.button("🚪 Logout"):
