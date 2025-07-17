@@ -1,7 +1,7 @@
 # utils/transcriber.py
 
 import streamlit as st
-from deepgram import DeepgramClient, PrerecordedOptions
+from deepgram import DeepgramClient, PrerecordedOptions, ClientOptionsFromEnv
 import yt_dlp
 import tempfile
 import os
@@ -11,12 +11,15 @@ import mimetypes
 def transcribe_from_file(uploaded_file, language: str = "auto") -> tuple[str | None, str | None]:
     """
     Transcribes an uploaded audio or video file using the Deepgram API.
-    (This function is already correct and remains unchanged.)
     """
     if "DEEPGRAM_API_KEY" not in st.secrets:
         return None, "Error: DEEPGRAM_API_KEY is not configured in secrets."
     try:
-        deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"])
+        # --- FIX: Configure client with a longer timeout ---
+        config = ClientOptionsFromEnv(timeout=300) # 5-minute timeout
+        deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"], config)
+        # -------------------------------------------------
+        
         payload = {"buffer": uploaded_file.getvalue(), "mimetype": uploaded_file.type}
         
         if language == "auto":
@@ -59,7 +62,7 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
             st.info("Extracting and downloading audio from URL...")
             ydl_opts = {
                 'format': 'bestaudio/best',
-                'outtmpl': audio_output_template, # Download to this path template
+                'outtmpl': audio_output_template,
                 'noplaylist': True,
                 'cookiefile': cookie_filepath,
                 'quiet': True,
@@ -67,16 +70,17 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                # Get the actual path of the downloaded file
                 audio_output_path = ydl.prepare_filename(info)
 
             if not audio_output_path or not os.path.exists(audio_output_path):
                 return None, "Error: Failed to locate downloaded audio file."
 
             st.info("Sending downloaded audio to transcription service...")
-            deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"])
+            # --- FIX: Configure client with a longer timeout ---
+            config = ClientOptionsFromEnv(timeout=300) # 5-minute timeout
+            deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"], config)
+            # -------------------------------------------------
 
-            # Read the downloaded audio file as bytes
             with open(audio_output_path, 'rb') as audio_file:
                 audio_bytes = audio_file.read()
 
@@ -98,7 +102,5 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
     except Exception as e:
         return None, f"An error occurred during transcription: {e}"
     finally:
-        # Clean up the temporary cookie file
         if cookie_filepath and os.path.exists(cookie_filepath):
             os.remove(cookie_filepath)
-        # The temporary directory and the downloaded audio file within it are automatically cleaned up
