@@ -1,7 +1,7 @@
 # utils/transcriber.py
 
 import streamlit as st
-from deepgram import DeepgramClient, PrerecordedOptions, ClientOptionsFromEnv
+from deepgram import DeepgramClient, PrerecordedOptions
 import yt_dlp
 import tempfile
 import os
@@ -15,10 +15,8 @@ def transcribe_from_file(uploaded_file, language: str = "auto") -> tuple[str | N
     if "DEEPGRAM_API_KEY" not in st.secrets:
         return None, "Error: DEEPGRAM_API_KEY is not configured in secrets."
     try:
-        # --- FIX: Configure client with a longer timeout ---
-        config = ClientOptionsFromEnv(timeout=300) # 5-minute timeout
-        deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"], config)
-        # -------------------------------------------------
+        # Initialize the client simply
+        deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"])
         
         payload = {"buffer": uploaded_file.getvalue(), "mimetype": uploaded_file.type}
         
@@ -27,7 +25,10 @@ def transcribe_from_file(uploaded_file, language: str = "auto") -> tuple[str | N
         else:
             options = PrerecordedOptions(model="nova-2", smart_format=True, language=language)
 
-        response = deepgram.listen.prerecorded.v("1").transcribe_file(payload, options)
+        # --- FIX: Add the timeout directly to the API call ---
+        response = deepgram.listen.prerecorded.v("1").transcribe_file(payload, options, timeout=300) # 5-minute timeout
+        # ----------------------------------------------------
+        
         transcript_text = response["results"]["channels"][0]["alternatives"][0]["transcript"]
         
         if not transcript_text:
@@ -55,7 +56,6 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
         with os.fdopen(fd_cookie, 'wb') as cookie_file:
             cookie_file.write(decoded_cookies)
 
-        # Create a temporary directory to download the audio file into
         with tempfile.TemporaryDirectory() as tmpdir:
             audio_output_template = os.path.join(tmpdir, 'downloaded_audio.%(ext)s')
 
@@ -76,10 +76,8 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
                 return None, "Error: Failed to locate downloaded audio file."
 
             st.info("Sending downloaded audio to transcription service...")
-            # --- FIX: Configure client with a longer timeout ---
-            config = ClientOptionsFromEnv(timeout=300) # 5-minute timeout
-            deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"], config)
-            # -------------------------------------------------
+            # Initialize the client simply
+            deepgram = DeepgramClient(st.secrets["DEEPGRAM_API_KEY"])
 
             with open(audio_output_path, 'rb') as audio_file:
                 audio_bytes = audio_file.read()
@@ -92,7 +90,10 @@ def transcribe_from_url(url: str, language: str = "auto") -> tuple[str | None, s
             else:
                 options = PrerecordedOptions(model="nova-2", smart_format=True, language=language)
 
-            response = deepgram.listen.prerecorded.v("1").transcribe_file(payload, options)
+            # --- FIX: Add the timeout directly to the API call ---
+            response = deepgram.listen.prerecorded.v("1").transcribe_file(payload, options, timeout=300) # 5-minute timeout
+            # ----------------------------------------------------
+            
             transcript_text = response["results"]["channels"][0]["alternatives"][0]["transcript"]
 
             if not transcript_text:
