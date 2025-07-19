@@ -18,6 +18,8 @@ import cloudinary
 import cloudinary.uploader
 from utils.web_scraper import scrape_website_text
 from utils.transcriber import transcribe_from_file, transcribe_from_url
+from utils.chat_ui import render_chat_ui
+from rag_pipeline import get_or_build_index, get_rag_response
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -34,6 +36,10 @@ if "attachment_url" not in st.session_state:
     st.session_state.attachment_url = None
 if "note_creation_mode" not in st.session_state:
     st.session_state.note_creation_mode = "text" # Default to 'text' mode
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "chat_is_open" not in st.session_state:
+    st.session_state.chat_is_open = False
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -94,6 +100,14 @@ user = st.session_state["user"]
 token = st.session_state["token"]
 user_id = user["_id"]
 
+# --- Build or retrieve the RAG index for the user's notes ---
+all_notes = load_notes(user_id)
+if all_notes:
+    vector_index = get_or_build_index(all_notes)
+else:
+    vector_index = None
+# -----------------------------------------------------------
+
 st.title(f"📝 SecureScribe - Welcome, {user.get('name', 'User')}")
 
 # --- Sidebar Profile Display ---
@@ -150,7 +164,7 @@ if st.sidebar.button("👤 Profile"):
     st.session_state.active_page = "Profile"
     st.rerun()
 
-#st.sidebar.markdown("---")
+st.sidebar.markdown("---")
 
 # Add logout button in sidebar
 if st.sidebar.button("🚪 Logout"):
@@ -722,3 +736,50 @@ elif st.session_state.active_page == "Transcribe Media":
 # ----------------------------- USER PROFILE -----------------------------
 elif st.session_state.active_page == "Profile":
     user_profile_page(user)
+
+# ----------------------------- CHAT UI -----------------------------
+
+# --- RAG Chatbot Logic and UI Rendering ---
+if st.session_state.get("chat_is_open", False):
+    # Use st.container() to group the chat UI elements inside the popup
+    with st.container():
+        # This is a placeholder for the popup's visual container
+        # The actual styling is handled by the CSS in chat_ui.py
+        st.markdown('<div class="chat-popup">', unsafe_allow_html=True)
+        
+        # Header
+        st.markdown("""
+            <div class="chat-header">
+                <h3>AI Tutor</h3>
+                <button class="close-btn" onclick="toggleChat()">×</button>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Chat message area
+        chat_area = st.container()
+        with chat_area:
+            for message in st.session_state.chat_history:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+        
+        # Chat input
+        if prompt := st.chat_input("Ask about your notes..."):
+            # Add user message to history and display it
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            
+            # Get the AI's response
+            if vector_index is not None:
+                response = get_rag_response(prompt, vector_index)
+            else:
+                response = "I can't answer questions until you have at least one note."
+            
+            # Add AI response to history
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            
+            # Rerun to display the new messages
+            st.rerun()
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# Render the floating button on every page run
+render_chat_ui()
