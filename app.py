@@ -18,7 +18,7 @@ import cloudinary
 import cloudinary.uploader
 from utils.web_scraper import scrape_website_text
 from utils.transcriber import transcribe_from_file, transcribe_from_url
-from utils.chat_ui import render_chat_ui
+from utils.chat_ui import render_chat_css, render_chat_button
 from rag_pipeline import get_or_build_index, get_rag_response
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
@@ -40,6 +40,13 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "chat_is_open" not in st.session_state:
     st.session_state.chat_is_open = False
+if "chat" in st.query_params:
+    if st.query_params["chat"] == "open":
+        st.session_state.chat_is_open = True
+    elif st.query_params["chat"] == "close":
+        st.session_state.chat_is_open = False
+    # Clear the query param to have a clean URL
+    st.query_params.clear()
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -740,46 +747,51 @@ elif st.session_state.active_page == "Profile":
 # ----------------------------- CHAT UI -----------------------------
 
 # --- RAG Chatbot Logic and UI Rendering ---
-if st.session_state.get("chat_is_open", False):
-    # Use st.container() to group the chat UI elements inside the popup
-    with st.container():
-        # This is a placeholder for the popup's visual container
-        # The actual styling is handled by the CSS in chat_ui.py
-        st.markdown('<div class="chat-popup">', unsafe_allow_html=True)
-        
-        # Header
-        st.markdown("""
-            <div class="chat-header">
-                <h3>AI Tutor</h3>
-                <button class="close-btn" onclick="toggleChat()">×</button>
-            </div>
-        """, unsafe_allow_html=True)
 
-        # Chat message area
-        chat_area = st.container()
-        with chat_area:
+# First, inject the CSS for our components
+render_chat_css()
+
+# Conditionally display the chat window
+if st.session_state.get("chat_is_open", False):
+    # Use a container with a specific class for CSS targeting
+    with st.container():
+        st.markdown('<div class="chat-popup-container">', unsafe_allow_html=True)
+        
+        # --- Header with Title and Close Button ---
+        header_cols = st.columns([3, 1])
+        with header_cols[0]:
+            st.subheader("🤖 AI Tutor")
+        with header_cols[1]:
+            # The close button is a link that sets the query param to close the chat
+            st.link_button("✖️", "?chat=close", help="Close Chat")
+
+        st.divider()
+
+        # --- Chat Message Display Area ---
+        chat_container = st.container(height=400) # Set a fixed height for scrolling
+        with chat_container:
+            if not st.session_state.chat_history:
+                st.info("Ask a question about your notes to get started!")
+            
             for message in st.session_state.chat_history:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
         
-        # Chat input
+        st.divider()
+
+        # --- Chat Input ---
         if prompt := st.chat_input("Ask about your notes..."):
-            # Add user message to history and display it
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             
-            # Get the AI's response
             if vector_index is not None:
                 response = get_rag_response(prompt, vector_index)
             else:
                 response = "I can't answer questions until you have at least one note."
             
-            # Add AI response to history
             st.session_state.chat_history.append({"role": "assistant", "content": response})
-            
-            # Rerun to display the new messages
-            st.rerun()
+            st.rerun() # Rerun to display the new messages immediately
 
         st.markdown('</div>', unsafe_allow_html=True)
-
-# Render the floating button on every page run
-render_chat_ui()
+else:
+    # If the chat is closed, render the button to open it
+    render_chat_button()
