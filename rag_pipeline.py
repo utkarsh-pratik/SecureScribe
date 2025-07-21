@@ -14,7 +14,7 @@ def get_embedding_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
 
 @st.cache_resource
-def get_or_build_index(notes: list):
+def get_or_build_index(_notes: list):
     """
     Creates vector embeddings for all notes. This is cached for the session.
     """
@@ -23,7 +23,7 @@ def get_or_build_index(notes: list):
     
     # We'll store both the embedding and the original text chunk
     note_chunks = []
-    for note in notes:
+    for note in _notes:
         if note.get("content"):
             # Simple chunking by paragraph for better context
             for chunk in note["content"].split('\n\n'):
