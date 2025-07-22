@@ -20,13 +20,13 @@ from utils.web_scraper import scrape_website_text
 from utils.transcriber import transcribe_from_file, transcribe_from_url
 from rag_pipeline import get_or_build_index, get_rag_response
 from utils.chat_ui import render_chat_widget
+from bson import ObjectId
+from encryption import decrypt
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
 def render_chat_page():
     """Renders only the chat interface, to be displayed inside the iframe."""
-    st.session_state.chat_is_open = True # Mark that the chat is active
-
     if "user_id" not in st.query_params:
         st.error("User not identified.")
         st.stop()
@@ -38,7 +38,7 @@ def render_chat_page():
         st.session_state.chat_history = []
 
     # Build or retrieve the RAG index
-    all_notes = load_notes(user_id) # Use a direct call to load notes
+    all_notes = load_notes(user_id)
     vector_index = get_or_build_index(all_notes) if all_notes else None
 
     # --- UI Rendering for the chat page ---
@@ -47,13 +47,13 @@ def render_chat_page():
         st.subheader("🤖 AI Tutor")
     with header_cols[1]:
         # This button sends a message to the parent window's JavaScript to close the iframe
-        if st.button("✖️", help="Close & Clear Chat"):
-            st.session_state.chat_history = [] # Clear history
+        if st.button("✖️", help="Close Chat"):
+            st.session_state.chat_history = [] # Clear history on close
             st.components.v1.html("<script>window.parent.postMessage('close-chat', '*')</script>", height=0)
 
     st.info("Ask questions about your notes.")
     st.divider()
-
+    
     # Display chat history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
