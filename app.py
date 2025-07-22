@@ -36,10 +36,7 @@ if "attachment_url" not in st.session_state:
     st.session_state.attachment_url = None
 if "note_creation_mode" not in st.session_state:
     st.session_state.note_creation_mode = "text" # Default to 'text' mode
-# --- Render the Floating Chat Widget ---
-# It will only be rendered if a user is logged in
-if st.session_state.get("user"):
-    render_chat_dialog(user_id=st.session_state.user["_id"])
+
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
@@ -742,48 +739,48 @@ elif st.session_state.active_page == "Profile":
 
 # ----------------------------- CHAT UI -----------------------------
 
-# --- RAG Chatbot Logic and UI Rendering ---
-
-# At the very end of app.py
-
 # --- Floating Chat Button and Dialog Logic ---
-st.markdown("""
-    <style>
-        /* Style for the floating button */
-        div[data-testid="stApp"] > div:first-child > div:nth-child(2) > div > button {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            font-size: 24px;
-            z-index: 1000;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
-@st.dialog("AI Tutor", width="large")
-def run_chat_dialog(vector_index):
-    """The function that runs inside the dialog popup."""
-    st.info("Ask a question about the content of your notes.")
-    
-    # Display previous messages from the session
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+# This check ensures the button only appears when a user is logged in
+# and the necessary data (vector_index) is ready.
+if st.session_state.get("user"):
+    st.markdown("""
+        <style>
+            /* Style for the floating button */
+            div[data-testid="stApp"] > div:first-child > div:nth-child(2) > div > button {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                font-size: 24px;
+                z-index: 1000;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Handle new user input
-    if prompt := st.chat_input("What do you want to know?"):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
+    @st.dialog("AI Tutor", width="large")
+    def run_chat_dialog(vector_index):
+        """The function that runs inside the dialog popup."""
+        st.info("Ask a question about the content of your notes.")
         
-        if vector_index is not None:
-            response = get_rag_response(prompt, vector_index)
-        else:
-            response = "I can't answer questions until you have at least one note."
-        
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
-        st.rerun() # Rerun the dialog to show the new messages
+        # Display previous messages from the session
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-if st.button("🧠", help="Ask the AI Tutor about your notes", type="primary"):
-    run_chat_dialog(vector_index)
+        # Handle new user input
+        if prompt := st.chat_input("What do you want to know?"):
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            
+            if vector_index is not None:
+                response = get_rag_response(prompt, vector_index)
+            else:
+                response = "I can't answer questions until you have at least one note."
+            
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            st.rerun() # Rerun the dialog to show the new messages
+
+    if st.button("🧠", help="Ask the AI Tutor about your notes", type="primary"):
+        run_chat_dialog(vector_index)
