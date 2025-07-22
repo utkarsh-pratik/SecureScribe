@@ -18,8 +18,8 @@ import cloudinary
 import cloudinary.uploader
 from utils.web_scraper import scrape_website_text
 from utils.transcriber import transcribe_from_file, transcribe_from_url
-from utils.chat_ui import render_chat_css, render_chat_button
 from rag_pipeline import get_or_build_index, get_rag_response
+from utils.chat_ui import render_chat_dialog
 
 st.set_page_config(page_title="SecureScribe", layout="wide")
 
@@ -36,17 +36,12 @@ if "attachment_url" not in st.session_state:
     st.session_state.attachment_url = None
 if "note_creation_mode" not in st.session_state:
     st.session_state.note_creation_mode = "text" # Default to 'text' mode
+# --- Render the Floating Chat Widget ---
+# It will only be rendered if a user is logged in
+if st.session_state.get("user"):
+    render_chat_dialog(user_id=st.session_state.user["_id"])
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-if "chat_is_open" not in st.session_state:
-    st.session_state.chat_is_open = False
-if "chat" in st.query_params:
-    if st.query_params["chat"] == "open":
-        st.session_state.chat_is_open = True
-    elif st.query_params["chat"] == "close":
-        st.session_state.chat_is_open = False
-    # Clear the query param to have a clean URL
-    st.query_params.clear()
 
 # --- DEBUGGING: Print current token status on each run ---
 print(f"SCRIPT RUN: Token is {'None' if st.session_state.token is None else 'Exists'}")
@@ -117,6 +112,7 @@ else:
 
 st.title(f"📝 SecureScribe - Welcome, {user.get('name', 'User')}")
 
+
 # --- Sidebar Profile Display ---
 
 # CSS to make the image round and centered
@@ -171,7 +167,7 @@ if st.sidebar.button("👤 Profile"):
     st.session_state.active_page = "Profile"
     st.rerun()
 
-st.sidebar.markdown("---")
+#st.sidebar.markdown("---")
 
 # Add logout button in sidebar
 if st.sidebar.button("🚪 Logout"):
@@ -748,50 +744,46 @@ elif st.session_state.active_page == "Profile":
 
 # --- RAG Chatbot Logic and UI Rendering ---
 
-# First, inject the CSS for our components
-render_chat_css()
+# At the very end of app.py
 
-# Conditionally display the chat window
-if st.session_state.get("chat_is_open", False):
-    # Use a container with a specific class for CSS targeting
-    with st.container():
-        st.markdown('<div class="chat-popup-container">', unsafe_allow_html=True)
+# --- Floating Chat Button and Dialog Logic ---
+st.markdown("""
+    <style>
+        /* Style for the floating button */
+        div[data-testid="stApp"] > div:first-child > div:nth-child(2) > div > button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            z-index: 1000;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+@st.dialog("AI Tutor", width="large")
+def run_chat_dialog(vector_index):
+    """The function that runs inside the dialog popup."""
+    st.info("Ask a question about the content of your notes.")
+    
+    # Display previous messages from the session
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Handle new user input
+    if prompt := st.chat_input("What do you want to know?"):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
         
-        # --- Header with Title and Close Button ---
-        header_cols = st.columns([3, 1])
-        with header_cols[0]:
-            st.subheader("🤖 AI Tutor")
-        with header_cols[1]:
-            # The close button is a link that sets the query param to close the chat
-            st.link_button("✖️", "?chat=close", help="Close Chat")
-
-        st.divider()
-
-        # --- Chat Message Display Area ---
-        chat_container = st.container(height=400) # Set a fixed height for scrolling
-        with chat_container:
-            if not st.session_state.chat_history:
-                st.info("Ask a question about your notes to get started!")
-            
-            for message in st.session_state.chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+        if vector_index is not None:
+            response = get_rag_response(prompt, vector_index)
+        else:
+            response = "I can't answer questions until you have at least one note."
         
-        st.divider()
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        st.rerun() # Rerun the dialog to show the new messages
 
-        # --- Chat Input ---
-        if prompt := st.chat_input("Ask about your notes..."):
-            st.session_state.chat_history.append({"role": "user", "content": prompt})
-            
-            if vector_index is not None:
-                response = get_rag_response(prompt, vector_index)
-            else:
-                response = "I can't answer questions until you have at least one note."
-            
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
-            st.rerun() # Rerun to display the new messages immediately
-
-        st.markdown('</div>', unsafe_allow_html=True)
-else:
-    # If the chat is closed, render the button to open it
-    render_chat_button()
+if st.button("🧠", help="Ask the AI Tutor about your notes", type="primary"):
+    run_chat_dialog(vector_index)
