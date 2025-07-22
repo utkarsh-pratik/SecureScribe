@@ -30,22 +30,22 @@ def render_chat_widget(user_id: str):
             }}
         </style>
 
-        <div id="chat-button" class="chat-button" onclick="openChat()">🧠</div>
+        <div id="chat-button" class="chat-button" onclick="toggleChat()">🧠</div>
 
         <div id="chat-popup" class="chat-popup">
             <iframe id="chat-iframe" src="{chat_app_url}" title="AI Tutor"></iframe>
         </div>
 
         <script>
+            const chatButton = document.getElementById('chat-button');
             const chatPopup = document.getElementById('chat-popup');
-            const chatIframe = document.getElementById('chat-iframe');
 
-            // This function opens the chat popup
-            function openChat() {{
-                chatPopup.style.display = 'flex';
+            function toggleChat() {{
+                const isHidden = chatPopup.style.display === 'none' || chatPopup.style.display === '';
+                chatPopup.style.display = isHidden ? 'flex' : 'none';
             }}
 
-            // We need a way for the iframe to tell the parent to close it
+            // Listen for a message from the iframe to close itself
             window.addEventListener('message', event => {{
                 if (event.data === 'close-chat') {{
                     chatPopup.style.display = 'none';
