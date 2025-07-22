@@ -1,51 +1,36 @@
 # utils/chat_ui.py
 
 import streamlit as st
+from rag_pipeline import get_rag_response
 
-def render_chat_css():
-    """Injects the CSS for the floating button and chat popup."""
-    st.markdown("""
-        <style>
-            /* Floating Action Button */
-            .chat-button {
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
-                width: 60px;
-                height: 60px;
-                background-color: #0d6efd; /* A modern blue */
-                color: white;
-                border-radius: 50%;
-                border: none;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-size: 24px;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                z-index: 1000;
-                text-decoration: none; /* Remove underline from link */
-            }
-            .chat-button:hover {
-                background-color: #0b5ed7;
-            }
-            /* Main Chat Popup Container */
-            .chat-popup-container {
-                position: fixed;
-                bottom: 100px;
-                right: 30px;
-                width: 420px;
-                max-height: 70vh;
-                background-color: #f9f9f9;
-                border-radius: 15px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-                z-index: 1001;
-                /* Use a container query for responsive design if needed */
-                container-type: inline-size;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+def render_chat_dialog(vector_index):
+    """
+    Renders the chat dialog and handles the RAG interaction.
+    """
+    # Initialize chat history if it doesn't exist
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-def render_chat_button():
-    """Renders the floating chat button as a styled link."""
-    st.markdown('<a href="?chat=open" target="_self" class="chat-button">🧠</a>', unsafe_allow_html=True)
+    # Display previous messages
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Handle new user input
+    if prompt := st.chat_input("Ask a question about your notes..."):
+        # Add user message to history and display it
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # Get the AI's response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                if vector_index is not None:
+                    response = get_rag_response(prompt, vector_index)
+                else:
+                    response = "I can't answer questions until you have at least one note."
+                st.markdown(response)
+        
+        # Add AI response to history
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
