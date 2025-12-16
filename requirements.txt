@@ -89,4 +89,5 @@ google-api-python-client
 PyPDF2
 PyMuPDF
 beautifulsoup4
-deepgram-sdk
+deepgram-sdk<4.0
+
